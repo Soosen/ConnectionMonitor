@@ -3,6 +3,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import signal
+import random
 
 
 DEFAULT_PING_ADDRES = "8.8.8.8"
@@ -59,7 +60,6 @@ def pingHost(hostname, frequency):
         ax.set_ylim([0, max(measures) + 50 - max(measures)%50])
 
         #update x and y data
-        line.set_xdata(x)
         line.set_ydata(measures)
 
         # drawing updated values
