@@ -1,20 +1,46 @@
+##to DO
+#predkosci
+#mapa urzadzen
+#otwarte porty
+#packet loss
+
 import subprocess
 import time
 import matplotlib.pyplot as plt
 import numpy as np
 import signal
 import random
+import socket
 
 
 DEFAULT_PING_ADDRES = "8.8.8.8"
 LOCAL_HOST = "LOCALHOST"
 
 def main():
-    pingHost(DEFAULT_PING_ADDRES, 0.5)
+    #pingHost(DEFAULT_PING_ADDRES, 0.5)
+    IpMacs = getDevicesInNetwork()
+    DefaultGateway = IpMacs[0][0]
+    tracertHost(DefaultGateway)
+    #Mask = getMask()
+    #IpHostnameDict = getIpHostnameDict(IpMacs)    
     print("Closed correctly")
 
+def tracertHost(hostname):
+    try:
+        respond = subprocess.check_output("tracert " + hostname, shell=False)
+        respond = respond.decode("ascii", errors="ignore")
+        print(respond)
+    except:
+        print("tracert timed out.")
 
 def pingHost(hostname, frequency):
+
+    try:
+        respond = str(subprocess.check_output("ping " + hostname + " -n 1", shell=False))
+    except:
+            print("Request timed out.")
+            return
+
     # to run GUI event loop
     plt.ion()
 
@@ -48,7 +74,12 @@ def pingHost(hostname, frequency):
             break
 
         #get current ping value
-        respond = str(subprocess.check_output("ping " + hostname + " -n 1", shell=False))
+        try:
+            respond = str(subprocess.check_output("ping " + hostname + " -n 1", shell=False))
+        except:
+            print("Request timed out.")
+            plt.close()
+            return
 
         #add a new measurement as the first element
         measures = np.insert(measures, 0, getPingFromRespond(respond))
@@ -78,6 +109,50 @@ def getPingFromRespond(respond):
     respond = respond[respond.index("time=") + 5:respond.index("ms")]
     return int(respond)
 
+
+def getDevicesInNetwork():
+    output = []
+    respond = subprocess.check_output("arp -a", shell=False)
+    respond = respond.decode("ascii", errors="ignore")
+
+    for line in respond.splitlines():
+        if("dynamic" in line):
+            temp = removeMultipleSpaces(line).split(" ")
+            output.append([temp[1], temp[2]])
+
+    return output
+
+def getMask():
+    output = []
+    respond = subprocess.check_output("ipconfig", shell=False)
+    respond = respond.decode("ascii", errors="ignore")
+    for line in respond.splitlines():
+        if("Mask" in line):
+            output.append(line[line.index(":") + 2:])
+    
+    if("255.255.255.0" in output):
+        return "255.255.255.0"
+    return output        
+
+def getIpHostnameDict(IpMacs):
+    output = {}
+    for ip in IpMacs:
+        try:
+            respond = socket.gethostbyaddr(ip[0])
+            output[respond[0]] = respond[2][0]
+        except:
+            print("Failed for " + ip[0])
+            continue
+    return output
+
+def removeMultipleSpaces(string):
+    output = ""
+    for s in range(len(string) - 1):
+        if(string[s] == ' ' and string[s+1] == ' '):
+            continue
+
+        output += string[s]
+    return output
 
 #close the program on keyboard interrupt
 def keyboardInterruptHandler(signum, frame):
